@@ -1,41 +1,38 @@
 #!/bin/bash
 
-#Declare User and Groups Arrays
-users=()
+# Declare User and Groups Arrays
+users=() 
 groups=()
 
-#Declare logfiles and password paths
+
+# Declare logfiles and password paths
 log_file="/var/log/user_management.log"
-password=="/var/secure/user_passwords.txt"
+password_file="/var/secure/user_passwords.txt"
 
-#Read input file using functions
+# Read input file using functions
 function readInputFile() {
-        local file="$1"
-        #Read input file
-        while IFS= read -r line; do
-                user=$(echo "$line" | cut -d';' -f1 | tr -d '[:space;]')
-                group=$(echo "$line" | cut -d';' -f2 | tr -d '[:space;]')
-
-        # Add user to the users in array
+    local file="$1"
+    # Read input file
+    while IFS= read -r line; do
+        user=$(echo "$line" | cut -d';' -f1 | tr -d '[:space:]')
+        group=$(echo "$line" | cut -d';' -f2 | tr -d '[:space:]')
+        # Add user to the users array
         users+=("$user")
-        # Add group to the groups in array
+        # Add group to the groups array
         groups+=("$group")
     done < "$file"
 }
 
-
-# Check if necessary amount of argument is passed( 1 arg)
+# Check if necessary amount of argument is passed(1 arg)
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <input_file>"
     exit 1
 fi
 
-
-
 # Read input file
 input_file="$1"
 echo "Reading your input file: $input_file"
-read_input_file "$input_file"
+readInputFile "$input_file"
 
 # Check existence of the log and password files, and create them if not
 if [ ! -f "$log_file" ]; then
@@ -43,6 +40,7 @@ if [ ! -f "$log_file" ]; then
     touch "$log_file"
     chmod 640 "$log_file"
 fi
+
 if [ ! -f "$password_file" ]; then
     mkdir -p /var/secure
     touch "$password_file"
@@ -53,7 +51,7 @@ fi
 for (( i = 0; i < ${#users[@]}; i++ )); do
     user="${users[$i]}"
     user_groups="${groups[$i]}"
-
+    
     if id "$user" &>/dev/null; then
         echo "User $user already exists, Skipped" | tee -a "$log_file"
     else
@@ -69,7 +67,7 @@ for (( i = 0; i < ${#users[@]}; i++ )); do
         password=$(openssl rand -base64 50 | tr -dc 'A-Za-z0-9!?%=' | head -c 10)
         echo "$user:$password" | chpasswd
         if [[ $? -ne 0 ]]; then
- echo "Set password for $user failed" | tee -a "$log_file"
+            echo "Set password for $user failed" | tee -a "$log_file"
             exit 1
         fi
         echo "Password for $user set successfully" | tee -a "$log_file"
@@ -95,7 +93,7 @@ for (( i = 0; i < ${#users[@]}; i++ )); do
                     exit 1
                 fi
                 echo "Group $group created successfully" | tee -a "$log_file"
- fi
+            fi
             usermod -aG "$group" "$user"
             if [[ $? -ne 0 ]]; then
                 echo "Add user $user to group $group failed" | tee -a "$log_file"
